@@ -1,0 +1,13 @@
+{
+	"version": "0.0.5",
+	"name": "cjs",
+	"dependencies": {
+		"minimist": "latest",
+		"fs-extra": "latest",
+		"async": "latest",
+		"request": "latest"
+	},
+	"bin": {
+		"cjs": "cjs.js"
+	}
+}
