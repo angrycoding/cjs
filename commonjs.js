@@ -128,53 +128,46 @@
 	var loadingCounter = 0;
 	var REQUIRE_CACHE = {};
 
-	var messageBusPath = uriResolve('slib/MessageBus.js', extensionPath);
-
-
 	function fetched(uri, data) {
 
 		REQUIRE_CACHE[uri].data = data.replace(/#require\s*\((.+)\)/g, function(match, requirePath) {
+
+			requirePath = requirePath.slice(1, -1).split('!');
+			var extraData = requirePath.slice(1).join('!');
+			requirePath = requirePath[0];
+
+
+			if (requirePath.match(/^[a-z]+$/i)) {
+				requirePath = `${extensionPath}cjs/modules/${requirePath}/main.js`;
+			} else {
+				requirePath = uriResolve(requirePath, uri);
+			}
 			
-			requirePath = uriResolve(requirePath.slice(1, -1), uri);
 
-			var baseName = requirePath.split('/').pop();
-			if (baseName.match(/^[a-z]+$/i)) {
-				baseName = baseName.toLowerCase();
-				requirePath = `${extensionPath}cjs/modules/${baseName}/main.js`;
-				console.info('NAMED_IMPORT', requirePath);
-				// check if module present in registry
-			}
+			// if (requirePath.includes('!')) {
+				// requirePath = requirePath.split('!');
+				// extraData = requirePath.slice(1).join('!');
+				// requirePath = requirePath[0];
+			// }
+
+			if (!requirePath.endsWith('.js')) requirePath += '.js';
+
+			// if (requirePath.split('.').pop() !== 'js') {
+			// 	return `(function(){throw 'invalid require path ${JSON.stringify(requirePath)}'})()`;
+			// }
 
 
-			var extName = requirePath.split('.').pop();
-
-			if (!requirePath.startsWith(extensionPath) ||
-				!['html', 'css', 'tpl', 'js'].includes(extName)) {
-				return `(function(){throw 'invalid require path ${JSON.stringify(requirePath)}'})()`;
-			}
-
-			if (extName === 'html') {
-				return JSON.stringify(requirePath);
-			}
-
-			if (extName === 'css') {
-				var linkEl = document.createElement('link');
-				linkEl.setAttribute('rel', 'stylesheet');
-				linkEl.setAttribute('href', requirePath);
-				document.documentElement.appendChild(linkEl);
-				return '';
-			}
-
-			if (extName === 'tpl') {
-				doFetch(messageBusPath);
-				return `(function(ret, context) {
-					GET_PRELOADED(${JSON.stringify(messageBusPath)})
-					.sendToBackground('@histoneRender', [${JSON.stringify(requirePath)}, context], ret);
-				})`;
-			}
 
 			doFetch(requirePath);
-			return `GET_PRELOADED(${JSON.stringify(requirePath)})`;
+
+			if (extraData) {
+				return `GET_PRELOADED(${JSON.stringify(requirePath)}, ${JSON.stringify(uri)}, ${JSON.stringify(extraData)})`;
+			}
+
+			else {
+				return `GET_PRELOADED(${JSON.stringify(requirePath)}, ${JSON.stringify(uri)})`;
+			}
+
 		});
 
 		if (!--loadingCounter) bootDone();
@@ -202,13 +195,20 @@
 
 
 
-	function doExecute(uri) {
+	function doExecute(uri, callerURI, extraData) {
+
 		var cacheEntry = REQUIRE_CACHE[uri];
+		
 		if (!cacheEntry.ready) {
 			cacheEntry.ready = true;
 			try { cacheEntry.data = new Function('GET_PRELOADED', cacheEntry.data)(doExecute); }
 			catch (exception) { cacheEntry.data = undefined; console.error(uri, exception); }
 		}
+
+		if (extraData && typeof cacheEntry.data === 'function') {
+			return cacheEntry.data(callerURI, extraData);
+		}
+
 		return cacheEntry.data;
 	}
 

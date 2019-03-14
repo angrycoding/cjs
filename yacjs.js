@@ -10,7 +10,6 @@ var workingDir = process.cwd();
 var cjsMainDir = Path.resolve(workingDir, 'cjs');
 var cjsModulesDir = Path.resolve(cjsMainDir, 'modules');
 
-
 function writeFile(path, contents, ret) {
 	FS.ensureFile(path, function(error) {
 		if (error) return ret(error);

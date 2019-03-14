@@ -1,6 +1,6 @@
 {
 	"version": "0.0.5",
-	"name": "cjs",
+	"name": "yacjs",
 	"dependencies": {
 		"minimist": "latest",
 		"fs-extra": "latest",
@@ -8,6 +8,6 @@
 		"request": "latest"
 	},
 	"bin": {
-		"cjs": "cjs.js"
+		"yacjs": "yacjs.js"
 	}
 }
